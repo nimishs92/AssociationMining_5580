@@ -3,55 +3,41 @@ library(plyr)
 library(dplyr)
 library(ggplot2)
 
-
 install.packages("dplyr")
 install.packages("ggplot2")
 
-df_user= read.csv("Clean_UserData.csv")
+df_user= read.csv("UserData.csv")
 summary(df_user)
 
 print (df_user)
 
-# # Graph- 1
-# df_user_Analysis <- df_user%>%
-#   dplyr::group_by(milestone_name)%>%
-#   dplyr::tally()%>%
-#   dplyr::mutate(percent=n/sum(n))
-# 
-# pl <- ggplot(data = top_n(df_user_Analysis, 5, n),aes(x= reorder(milestone_name, -n), y = n))
-# pl <- pl + geom_bar(stat="identity")
-# pl <- pl + geom_text(aes(label=paste0(sprintf("%1.1f", percent*100),"%", " (",n,")")), position=position_stack(vjust=0.5), colour="white", size = 3)
-# pl <- pl + labs(x="Milestones", y="Count", title = "Milestone visiting details")
-# pl
-# 
-# # Graph- 2
-# pl_bottom <- ggplot(data = top_n(df_user_Analysis, -5, n),aes(x= reorder(milestone_name, n), y = n))
-# pl_bottom <- pl_bottom + geom_bar(stat="identity")
-# pl_bottom <- pl_bottom + geom_text(aes(label=paste0(sprintf("%1.1f", percent*100),"%", " (",n,")")), position=position_stack(vjust=0.5), colour="white", size = 3)
-# pl_bottom <- pl_bottom + labs(x="Milestones", y="Count", title = "Milestone visiting details")
-# pl_bottom
 
-
-# Transpose
-
+# subsetting
 df_user_New <- df_user[c("user_id","milestone_name")]
 print(df_user_New)
 
+# Transpose based on the user_id using dfl function
 df_user_transpose = ddply(df_user_New,c("user_id"),function(dfl)paste(dfl$milestone_name, collapse=","))
+
+#Check the output of the transpose
 head(df_user_transpose)
-#print(df_user_transpose)
+
+#Set user_id to null as it will not contribute to the apriori algorithm.
 df_user_transpose$user_id = NULL
-#head(df_user_transpose)
-write.table(df_user_transpose,"./Milestones2_I.csv", quote=FALSE, row.names = FALSE, col.names = FALSE)
-tr = read.transactions("./Milestones2_I.csv",format="basket",sep=",")
+
+#Save the transposed data into file by skipping the columns names
+write.table(df_user_transpose,"./User_Transpose.csv", quote=FALSE, row.names = FALSE, col.names = FALSE)
+
+# For basket format, each line in the transaction dataframe represents a transaction where the items are separated by the characters specified by sep.
+tr = read.transactions("./User_Transpose.csv",format="basket",sep=",")
 summary(tr)
 
+# Fetch the top 10 most repeated items
 itemFrequencyPlot(tr, topN=10)
 
-#Try 1
+#
 rules = apriori(tr,parameter = list(supp=0.3,conf=0.8))
 inspect(sort(rules,by='lift'))[1:10]
 itemsets=unique(generatingItemsets(rules))
 itemsets
 inspect(itemsets)
-
